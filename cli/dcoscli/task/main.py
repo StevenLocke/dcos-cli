@@ -1,6 +1,6 @@
 import posixpath
 
-import docopt
+import docopt_wrapper as docopt
 import six
 
 import dcoscli
@@ -24,11 +24,26 @@ def main(argv):
 
 @decorate_docopt_usage
 def _main(argv):
-    args = docopt.docopt(
-        default_doc("task"),
-        argv=argv,
-        version="dcos-task version {}".format(dcoscli.version))
-
+    if len(argv) > 1 and argv[1] == "exec":
+        args = docopt.docopt(\
+'''
+Usage:
+    dcos-task-exec [--interactive --pty] <task> <cmd> [<args>...]
+''',
+            argv=argv[2:],
+            version="dcos-task version {}".format(dcoscli.version),
+            options_first=True,
+            programs=["dcos task exec"])
+        args['task'] = True
+        args['exec'] = True
+        args['log'] = False
+        args['ls'] = False
+        args['--info'] = False
+    else:
+         args = docopt.docopt(
+            default_doc("task"),
+            argv=argv,
+            version="dcos-task version {}".format(dcoscli.version))
     return cmds.execute(_cmds(), args)
 
 
@@ -54,6 +69,16 @@ def _cmds():
             hierarchy=['task', 'ls'],
             arg_keys=['<task>', '<path>', '--long', '--completed'],
             function=_ls),
+
+        cmds.Command(
+            hierarchy=['task', 'exec'],
+            arg_keys=['<task>', '<cmd>', '--interactive', '--pty', '<args>'],
+            function=_exec),
+
+        cmds.Command(
+            hierarchy=['task', 'attach'],
+            arg_keys=['<task>', '--interactive', '--pty'],
+            function=_attach),
 
         cmds.Command(
             hierarchy=['task'],
@@ -216,6 +241,40 @@ def _ls(task, path, long_, completed):
             emitter.publish(
                 '  '.join(posixpath.basename(file_['path'])
                           for file_ in files))
+
+
+def _exec(task, cmd, interactive=False, pty=False, args=None):
+    """ Fork a prcess inside the namespace of a container
+    associated with <task_id>.
+
+    :param task: task ID pattern to match
+    :type task: str
+    :param interactive: attach stdin
+    :type interactive: bool
+    :param pty: allocate a PTY on the remote connection
+    :type pty: bool
+    :param args: Additional arguments for the command
+    :type args: str
+    """
+
+    tIO = mesos.TaskIO(task, interactive, pty, cmd, args)
+    tIO.IORunner()
+
+
+def _attach(task, interactive=False, pty=False):
+    """Attach to STDOUT/ERR and optionally STDIN of
+    an already running process executed by Mesos.
+
+    :param task: task ID pattern to match
+    :type task: str
+    :param interactive: attach stdin
+    :type interactive: bool
+    :param pty: allocate a PTY on the remote connection
+    :type pty: bool
+    """
+
+    tIO = mesos.TaskIO(task, interactive, pty)
+    tIO.IORunner()
 
 
 def _mesos_files(tasks, file_, client):
