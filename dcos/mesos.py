@@ -22,10 +22,9 @@ from dcos.errors import DCOSException, DCOSHTTPException
 
 from queue import Queue
 
-import recordio
+from dcos import recordio
 
 logger = util.get_logger(__name__)
-
 
 def get_master(dcos_client=None):
     """Create a Master object using the url stored in the
@@ -1005,7 +1004,7 @@ class TaskIO(object):
         self.cmd = cmd
         self.args = args
 
-        self.encoder = recordio.Encoder(MessageToJson)
+        self.encoder = recordio.Encoder(lambda s: bytes(MessageToJson(s), "UTF-8"))
         self.decoder = recordio.Decoder(self.record_parse)
 
         self.input_queue = Queue()
@@ -1115,7 +1114,7 @@ class TaskIO(object):
                 if len(chunk) == 0:
                     break
 
-                records = self.decoder.decode(chunk.decode('utf-8'))
+                records = self.decoder.decode(chunk)
 
                 if records:
                     for r in records:
@@ -1142,8 +1141,8 @@ class TaskIO(object):
                 item = self.input_queue.get()
                 if send_init:
                     send_init = False
-                    yield bytes(self.encoder.encode(init_input_attach_msg), 'utf-8')
-                yield bytes(item, 'UTF-8')
+                    yield self.encoder.encode(init_input_attach_msg)
+                yield item
 
         req_extra_args = {
             'stream': True,
