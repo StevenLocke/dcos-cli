@@ -108,10 +108,10 @@ def _cmds():
             arg_keys=['<task>', '<cmd>', '--interactive', '--pty', '<args>'],
             function=_exec),
 
-        cmds.Command(
-            hierarchy=['task', 'attach'],
-            arg_keys=['<task>', '--interactive', '--pty'],
-            function=_attach),
+        # cmds.Command(
+        #     hierarchy=['task', 'attach'],
+        #     arg_keys=['<task>', '--interactive', '--pty'],
+        #     function=_attach),
 
         cmds.Command(
             hierarchy=['task'],
@@ -294,20 +294,20 @@ def _exec(task, cmd, interactive=False, pty=False, args=None):
     tIO.IORunner()
 
 
-def _attach(task, interactive=False, pty=False):
-    """Attach to STDOUT/ERR and optionally STDIN of
-    an already running process executed by Mesos.
+# def _attach(task, interactive=False, pty=False):
+#     """Attach to STDOUT/ERR and optionally STDIN of
+#     an already running process executed by Mesos.
 
-    :param task: task ID pattern to match
-    :type task: str
-    :param interactive: attach stdin
-    :type interactive: bool
-    :param pty: allocate a PTY on the remote connection
-    :type pty: bool
-    """
+#     :param task: task ID pattern to match
+#     :type task: str
+#     :param interactive: attach stdin
+#     :type interactive: bool
+#     :param pty: allocate a PTY on the remote connection
+#     :type pty: bool
+#     """
 
-    tIO = mesos.TaskIO(task, interactive, pty)
-    tIO.IORunner()
+#     tIO = mesos.TaskIO(task, interactive, pty)
+#     tIO.IORunner()
 
 
 def _mesos_files(tasks, file_, client):
