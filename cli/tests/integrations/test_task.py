@@ -317,7 +317,7 @@ def test_ls_completed():
 
 
 @pytest.mark.skipif('DCOS_DEBUGGING_ENABLED' not in os.environ,
-                    reason="Requires Agent Dbugging APIs")
+                    reason="Requires Agent Debugging APIs")
 def test_exec_non_interactive():
     with open('tests/data/tasks/lorem-ipsum.txt') as text:
         content = text.read()
@@ -331,7 +331,7 @@ def test_exec_non_interactive():
 
 
 @pytest.mark.skipif('DCOS_DEBUGGING_ENABLED' not in os.environ,
-                    reason="Requires Agent Dbugging APIs")
+                    reason="Requires Agent Debugging APIs")
 def test_exec_interactive():
     with open('tests/data/tasks/lorem-ipsum.txt') as text:
         content = bytes(text.read(), 'UTF-8')
@@ -342,6 +342,112 @@ def test_exec_interactive():
         assert_command(
             ['dcos', 'task', 'exec', '--interactive', task_id, 'cat'],
             stdout=content, stdin=text)
+
+
+@pytest.mark.skipif('DCOS_DEBUGGING_ENABLED' not in os.environ,
+                    reason="Requires Agent Debugging APIs")
+def test_exec_non_tty():
+    assert_command(
+            ['dcos', 'task', 'exec', '--tty', task_id, 'tty'],
+            stdout=bytes('not a tty', 'UTF-8'))
+
+
+@pytest.mark.skipif('DCOS_DEBUGGING_ENABLED' not in os.environ,
+                    reason="Requires Agent Debugging APIs")
+def test_exec_tty():
+    returncode_, stdout_, stderr_ = exec_command(
+        ['dcos', 'task', 'exec', '--tty', task_id, 'tty'])
+    assert returncode_ == 0
+    assert stdout_ != bytes('not a tty', 'UTF-8')
+
+
+@pytest.mark.skipif('DCOS_DEBUGGING_ENABLED' not in os.environ,
+                    reason="Requires Agent Debugging APIs")
+@pytest.mark.skip(reason="Already tested with other test_execs")
+def test_exec_authorization_superuser():
+    # This test is superfluous. The user is already superuser in this test.
+    # This is included only for the sake of completeness.
+    with open('tests/data/tasks/lorem-ipsum.txt') as text:
+        content = text.read()
+
+    task_id = _get_task_id('test-app1')
+
+    with open('tests/data/tasks/lorem-ipsum.txt') as text:
+        assert_command(
+            ['dcos', 'task', 'exec', task_id, 'printf', content],
+            stdout=bytes(content, 'UTF-8'))
+
+
+@pytest.mark.skipif('DCOS_DEBUGGING_ENABLED' not in os.environ,
+                    reason="Requires Agent Debugging APIs")
+@pytest.mark.skip(reason="Unknown how to edit privileges of group")
+def test_exec_authorization_authorized():
+    #Create user (username:password)
+    assert_command(['dcos', 'security', 'org', 'users',
+        'create' 'username', '--password' 'password'])
+
+    #Create group
+    assert_command(['dcos', 'security', 'org', 'groups', 'create',
+     'authorizedGroup'])
+
+    #Assign privileges to group
+
+    #Add user to group
+    assert_command(['dcos', 'security', 'org', 'groups', 'add_user',
+     'authorizedGroup', 'username'])
+
+    #logout from superuser
+    assert_command(['dcos', 'auth', 'logout'])
+
+    #Login as authorized user
+    assert_command(
+        ['dcos', 'auth', 'login', '--user=username', '--password=password'])
+
+    with open('tests/data/tasks/lorem-ipsum.txt') as text:
+        content = text.read()
+
+    task_id = _get_task_id('test-app1')
+
+    with open('tests/data/tasks/lorem-ipsum.txt') as text:
+        assert_command(
+            ['dcos', 'task', 'exec', task_id, 'printf', content],
+            stdout=bytes(content, 'UTF-8'))
+
+
+@pytest.mark.skipif('DCOS_DEBUGGING_ENABLED' not in os.environ,
+                    reason="Requires Agent Debugging APIs")
+@pytest.mark.skip(reason="Unknown how to edit privileges of group")
+def test_exec_authorization_unauthorized():
+    #Create user (username:password)
+    assert_command(['dcos', 'security', 'org', 'users',
+        'create' 'username', '--password' 'password'])
+
+    #Create group
+    assert_command(['dcos', 'security', 'org', 'groups', 'create',
+     'unauthorizedGroup'])
+
+    #Assign privileges to group
+
+    #Add user to group
+    assert_command(['dcos', 'security', 'org', 'groups', 'add_user',
+     'unauthorizedGroup', 'username'])
+
+    #logout from superuser
+    assert_command(['dcos', 'auth', 'logout'])
+
+    #Login as unauthorized user
+    assert_command(
+        ['dcos', 'auth', 'login', '--user=username', '--password=password'])
+
+    with open('tests/data/tasks/lorem-ipsum.txt') as text:
+        content = text.read()
+
+    task_id = _get_task_id('test-app1')
+
+    with open('tests/data/tasks/lorem-ipsum.txt') as text:
+        assert_command(
+            ['dcos', 'task', 'exec', task_id, 'printf', content],
+            stderr=bytes('unauthorized', 'UTF-8'))
 
 
 def _mark_non_blocking(file_):
